@@ -11,10 +11,9 @@
     "video",
     "extractor",
     "m3u8",
-    "puppeteer",
     "api"
   ],
-  "author": "Aapka Naam",
+  "author": "Code Manjeet",
   "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
@@ -22,5 +21,9 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  }
+  ,
+  "puppeteer": {
+    "skipDownload": true
   }
 }
