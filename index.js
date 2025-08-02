@@ -4,7 +4,7 @@ const puppeteer = require('puppeteer');
 const app = express();
 const PORT = process.env.PORT || 3000; // Render apne aap PORT set karega
 
-// ✅ Puppeteer launch options with fallback
+// ✅ Puppeteer launch with bundled Chromium (no env needed)
 async function getM3u8Link(embedUrl) {
     let browser = null;
     console.log("Starting browser...");
@@ -12,7 +12,7 @@ async function getM3u8Link(embedUrl) {
     try {
         browser = await puppeteer.launch({
             headless: true,
-            executablePath: process.env.CHROMIUM_PATH || puppeteer.executablePath(), // ✅ Fallback logic
+            executablePath: puppeteer.executablePath(), // ✅ Bundled Chromium use karega
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -30,7 +30,7 @@ async function getM3u8Link(embedUrl) {
             page.on('request', request => {
                 const url = request.url();
                 if (url.includes('master.m3u8')) {
-                    console.log("Master M3U8 URL Found:", url);
+                    console.log("✅ Master M3U8 URL Found:", url);
                     resolve(url);
                 }
             });
@@ -82,12 +82,12 @@ app.get('/extract', async (req, res) => {
     }
 });
 
-// ✅ Root URL
+// ✅ Root Route
 app.get('/', (req, res) => {
     res.send('✅ Video Extractor API is running! Use /extract?url=<video_embed_url> to get the M3U8 link.');
 });
 
-// ✅ Start server
+// ✅ Start Server
 app.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);
 });
