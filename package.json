@@ -15,7 +15,7 @@
     "puppeteer",
     "api"
   ],
-  "author": "Aapka Naam",
+  "author": "Your Name",
   "license": "ISC",
   "dependencies": {
     "@sparticuz/chromium-min": "^123.0.0",
