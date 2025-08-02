@@ -1,21 +1,27 @@
 const express = require('express');
-const chromium = require('chrome-aws-lambda');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // Render apne aap PORT set kar dega
 
+// Yeh humara main scraper function hai
 async function getM3u8Link(embedUrl) {
     let browser = null;
-    console.log("Starting headless Chromium (Render-Optimized)...");
-
+    console.log("Starting browser...");
     try {
-        // ✅ Use chrome-aws-lambda's executablePath (Render-friendly)
+        // Render par Puppeteer ke liye special launch options
         browser = await puppeteer.launch({
-            args: chromium.args,
-            defaultViewport: chromium.defaultViewport,
-            executablePath: await chromium.executablePath,
-            headless: chromium.headless,
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process', // <- aasan process ke liye
+                '--disable-gpu'
+            ],
         });
 
         const page = await browser.newPage();
@@ -24,41 +30,67 @@ async function getM3u8Link(embedUrl) {
             page.on('request', request => {
                 const url = request.url();
                 if (url.includes('master.m3u8')) {
-                    console.log("✅ Master M3U8 URL Found:", url);
+                    console.log("Master M3U8 URL Found:", url);
                     resolve(url);
                 }
             });
-            setTimeout(() => reject(new Error("Timeout: Master M3U8 URL not found within 20s.")), 20000);
+            setTimeout(() => {
+                reject(new Error("Timeout: Master M3U8 URL not found within 20 seconds."));
+            }, 20000);
         });
 
         console.log(`Navigating to: ${embedUrl}`);
-        await page.goto(embedUrl, { waitUntil: 'networkidle2', timeout: 20000 });
+        await page.goto(embedUrl, { waitUntil: 'networkidle2' });
 
+        console.log("Waiting for M3U8 URL...");
         const m3u8Url = await m3u8Promise;
         return m3u8Url;
 
     } catch (error) {
         console.error("Scraping error:", error.message);
-        throw error;
+        // Error ko aage pass kar rahe hain taaki API response mein bhej sakein
+        throw error; 
     } finally {
-        if (browser) await browser.close();
+        if (browser) {
+            await browser.close();
+            console.log("Browser closed.");
+        }
     }
 }
 
-// ✅ API Endpoint
+// API Endpoint (Route)
 app.get('/extract', async (req, res) => {
-    const videoUrl = req.query.url;
-    if (!videoUrl) return res.status(400).json({ error: 'URL parameter is missing. Use ?url=...' });
+    const videoUrl = req.query.url; // URL ko query parameter se lena
+
+    if (!videoUrl) {
+        return res.status(400).json({ error: 'URL parameter is missing. Use ?url=...' });
+    }
 
     try {
+        console.log(`Processing URL: ${videoUrl}`);
         const m3u8Link = await getM3u8Link(videoUrl);
-        res.json({ source_url: videoUrl, master_link: m3u8Link });
+        
+        // Success response
+        res.status(200).json({
+            source_url: videoUrl,
+            master_link: m3u8Link
+        });
+
     } catch (error) {
-        res.status(500).json({ error: 'Failed to extract M3U8 link.', details: error.message });
+        // Error response
+        res.status(500).json({
+            error: 'Failed to extract M3U8 link.',
+            details: error.message
+        });
     }
 });
 
-// ✅ Root Route
-app.get('/', (req, res) => res.send('✅ Video Extractor API is running! Use /extract?url=<video_embed_url> to get the M3U8 link.'));
+// Root URL ke liye ek simple message
+app.get('/', (req, res) => {
+    res.send('Video Extractor API is running! Use /extract?url=<video_embed_url> to get the M3U8 link.');
+});
 
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// Server ko start karna
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
