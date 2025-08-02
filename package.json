@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "node node_modules/@sparticuz/chromium-min/bin/install.mjs"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "video",
@@ -15,12 +14,11 @@
     "puppeteer",
     "api"
   ],
-  "author": "Your Name",
+  "author": "Aapka Naam",
   "license": "ISC",
   "dependencies": {
-    "@sparticuz/chromium-min": "^123.0.0",
     "express": "^4.18.2",
-    "puppeteer-core": "^21.5.2"
+    "puppeteer": "^21.5.2" 
   },
   "engines": {
     "node": ">=18.0.0"
