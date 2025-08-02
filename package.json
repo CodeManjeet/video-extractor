@@ -4,8 +4,7 @@
   "description": "An API to extract M3U8 video links from embed URLs.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "postinstall": "npm install puppeteer --ignore-scripts"
+    "start": "node index.js"
   },
   "keywords": [
     "video",
