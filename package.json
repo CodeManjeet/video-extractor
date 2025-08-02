@@ -11,13 +11,15 @@
     "extractor",
     "m3u8",
     "puppeteer",
-    "api"
+    "api",
+    "chrome-aws-lambda"
   ],
   "author": "Aapka Naam",
   "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
-    "puppeteer": "^21.5.2"
+    "puppeteer-core": "^21.5.2",
+    "chrome-aws-lambda": "^10.1.0"
   },
   "engines": {
     "node": "18.x"
