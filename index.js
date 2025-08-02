@@ -1,27 +1,21 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
+const chromium = require('chrome-aws-lambda');
+const puppeteer = require('puppeteer-core');
 
 const app = express();
-const PORT = process.env.PORT || 3000; // Render apne aap PORT set karega
+const PORT = process.env.PORT || 3000;
 
-// ✅ Puppeteer launch with bundled Chromium (no env needed)
 async function getM3u8Link(embedUrl) {
     let browser = null;
-    console.log("Starting browser...");
+    console.log("Starting headless Chromium (Render-Optimized)...");
 
     try {
+        // ✅ Use chrome-aws-lambda's executablePath (Render-friendly)
         browser = await puppeteer.launch({
-            headless: true,
-            executablePath: puppeteer.executablePath(), // ✅ Bundled Chromium use karega
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu'
-            ],
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath,
+            headless: chromium.headless,
         });
 
         const page = await browser.newPage();
@@ -34,15 +28,12 @@ async function getM3u8Link(embedUrl) {
                     resolve(url);
                 }
             });
-            setTimeout(() => {
-                reject(new Error("Timeout: Master M3U8 URL not found within 20 seconds."));
-            }, 20000);
+            setTimeout(() => reject(new Error("Timeout: Master M3U8 URL not found within 20s.")), 20000);
         });
 
         console.log(`Navigating to: ${embedUrl}`);
         await page.goto(embedUrl, { waitUntil: 'networkidle2', timeout: 20000 });
 
-        console.log("Waiting for M3U8 URL...");
         const m3u8Url = await m3u8Promise;
         return m3u8Url;
 
@@ -50,44 +41,24 @@ async function getM3u8Link(embedUrl) {
         console.error("Scraping error:", error.message);
         throw error;
     } finally {
-        if (browser) {
-            await browser.close();
-            console.log("Browser closed.");
-        }
+        if (browser) await browser.close();
     }
 }
 
 // ✅ API Endpoint
 app.get('/extract', async (req, res) => {
     const videoUrl = req.query.url;
-
-    if (!videoUrl) {
-        return res.status(400).json({ error: 'URL parameter is missing. Use ?url=...' });
-    }
+    if (!videoUrl) return res.status(400).json({ error: 'URL parameter is missing. Use ?url=...' });
 
     try {
-        console.log(`Processing URL: ${videoUrl}`);
         const m3u8Link = await getM3u8Link(videoUrl);
-
-        res.status(200).json({
-            source_url: videoUrl,
-            master_link: m3u8Link
-        });
-
+        res.json({ source_url: videoUrl, master_link: m3u8Link });
     } catch (error) {
-        res.status(500).json({
-            error: 'Failed to extract M3U8 link.',
-            details: error.message
-        });
+        res.status(500).json({ error: 'Failed to extract M3U8 link.', details: error.message });
     }
 });
 
 // ✅ Root Route
-app.get('/', (req, res) => {
-    res.send('✅ Video Extractor API is running! Use /extract?url=<video_embed_url> to get the M3U8 link.');
-});
+app.get('/', (req, res) => res.send('✅ Video Extractor API is running! Use /extract?url=<video_embed_url> to get the M3U8 link.'));
 
-// ✅ Start Server
-app.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
